@@ -164,7 +164,7 @@ return [
          * Package Service Providers...
          */
         // Cors\ServiceProvider
-         \Barryvdh\Cors\HandleCors::class,
+         \Barryvdh\Cors\ServiceProvider::class,
 
         /*
          * Application Service Providers...
