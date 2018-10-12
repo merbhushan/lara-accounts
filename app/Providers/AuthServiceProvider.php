@@ -34,9 +34,13 @@ class AuthServiceProvider extends ServiceProvider
         // Passport::refreshTokensExpireIn(now()->addDays(30));
 
         // Defining Passport Scopes
-        // Passport::tokensCan([
-        //     'place-orders' => 'Place orders',
-        //     'check-status' => 'Check order status',
-        // ]);
+        Passport::tokensCan(Scope::select('name', 'display_name')
+            ->where('is_active',1)
+            ->get()
+            ->pluck('display_name', 'name')
+            ->toArray());
+
+        // Passport implicit grant token method enabled.
+        Passport::enableImplicitGrant();
     }
 }
