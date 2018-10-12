@@ -15,8 +15,12 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('login/github', 'Auth\LoginController@redirectToProvider');
-Route::get('login/github/callback', 'Auth\LoginController@handleProviderCallback');
+Route::get('login/{portal}', 'Auth\LoginController@redirectToProvider');
+Route::get('login/{portal}/callback', 'Auth\LoginController@handleProviderCallback');
+
+//Route::get('login/google', 'Auth\LoginController@redirectToGoogle');
+//Route::get('login/google/callback', 'Auth\LoginController@handleProviderCallback');
+
 
 Auth::routes();
 

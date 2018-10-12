@@ -9,7 +9,7 @@ use Laravel\Passport\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, Notifiable;
+    use HasApiTokens, Notifiable, \App\Model\CommonScope;
 
     /**
      * The attributes that are mass assignable.
@@ -28,4 +28,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password', 'remember_token',
     ];
+    
+    public function scopeUsername($query, $strUsername){
+        return $query->where('email',$strUsername);
+    }
 }

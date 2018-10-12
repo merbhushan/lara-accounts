@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 
 use Socialite;
+use App\User;
 
 class LoginController extends Controller
 {
@@ -28,6 +29,13 @@ class LoginController extends Controller
      * @var string
      */
     protected $redirectTo = '/home';
+    
+     /**
+     * Allowed portals for a login.
+     *
+     * @var array
+     */
+    protected $arrPortals = ["google", "github"];
 
     /**
      * Create a new controller instance.
@@ -44,20 +52,55 @@ class LoginController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function redirectToProvider()
+    public function redirectToProvider($strProvider)
     {
-        return Socialite::driver('github')->redirect();
+        if(in_array($strProvider, $this->arrPortals)){
+            return Socialite::driver($strProvider)->redirect();
+        }
+        return abort(404);
     }
 
+    
     /**
      * Obtain the user information from GitHub.
      *
      * @return \Illuminate\Http\Response
      */
-    public function handleProviderCallback()
+    public function handleProviderCallback($strProvider)
     {
-        $user = Socialite::driver('github')->user();
-
+        if(in_array($strProvider, $this->arrPortals)){
+            $user = Socialite::driver($strProvider)->stateless()->user();
+            
+            switch ($strProvider){
+                case 'google':
+                case 'github':
+                    $strUserEmail = $user->email;
+                    break;
+            }
+            
+            $objUser = User::username($strUserEmail)->active()->first();
+            
+            if($objUser instanceof \App\User){
+                dd("user is already exist please sign in to account.");
+            }
+            else{
+                $objUser = new User();
+                
+                switch ($strProvider){
+                    case 'google':
+                    case 'github':
+                        $objUser->email = $user->email;
+                        $arrName = explode(' ', $user->name);
+                        $objUser->fname = $arrName[0];
+                        $objUser->lname = $arrName[count($arrName)-1];
+                        break;
+                }
+                $objUser->save();
+            
+                dd("Account is created successfully..");
+            }
+        }
+        return abort(404);
         // $user->token;
     }
 }

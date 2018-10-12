@@ -42,5 +42,12 @@ return [
         'client_secret' => env('GITHUB_CLIENT_SECRET'), // Your GitHub Client Secret
         'redirect' => env('GITHUB_REDIRECT_URL'),
     ],
+    
+    // Google Service setup for socialite
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),         // Your GitHub Client ID
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'), // Your GitHub Client Secret
+        'redirect' => env('GOOGLE_REDIRECT_URL'),
+    ],
 
 ];
