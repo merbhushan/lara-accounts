@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Socialite;
 use App\User;
 use DB;
+use Illuminate\Http\Request;
 
 class LoginController extends Controller
 {
@@ -53,14 +54,27 @@ class LoginController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function redirectToProvider($strProvider)
+    public function redirectToProvider($strProvider, Request $request)
     {
         if(in_array($strProvider, $this->arrPortals)){
             return Socialite::driver($strProvider)->redirect();
+            return Socialite::driver($strProvider)
+                ->with(['redirect_url' => $request->redirect_url])
+                ->redirect();
         }
         return abort(404);
     }
 
+    // Function is being used to login using api call
+    public function apiLogin(Request $request){
+        if ($this->guard()->attempt(['email' => $request->email, 'password' => $request->password]))
+        {
+            return $this->startUserSessoin($this->guard()->user());
+        }
+        else{
+            return redirect('api/error/INVALID_USER');
+        }
+    }
     
     /**
      * Obtain the user information from GitHub.
@@ -70,17 +84,16 @@ class LoginController extends Controller
     public function handleProviderCallback($strProvider)
     {
         if(in_array($strProvider, $this->arrPortals)){
-            // $user = Socialite::driver($strProvider)->stateless()->user();
+            $user = Socialite::driver($strProvider)->stateless()->user();
             
-            // switch ($strProvider){
-            //     case 'google':
-            //     case 'github':
-            //         $strUserEmail = $user->email;
-            //         break;
-            // }
+            switch ($strProvider){
+                case 'google':
+                case 'github':
+                    $strUserEmail = $user->email;
+                    break;
+            }
             
-            // $objUser = User::username($strUserEmail)->active()->first();
-            $objUser = User::find(1);
+            $objUser = User::username($strUserEmail)->active()->first();
             
             if(!$objUser instanceof \App\User){
                 $objUser = new User();
@@ -96,33 +109,32 @@ class LoginController extends Controller
                 }
                 $objUser->save();
             }
-
-            $objRoleBasedScope = DB::table('scopes')
-                ->leftJoin('scope_role', 'scopes.id', '=', 'scope_role.scope_id')
-                ->leftJoin('user_role', 'user_role.role_id', '=', 'scope_role.role_id')
-                ->select(DB::raw('scopes.name as scope, scopes.portal_id as portal_id'))
-                ->where('user_role.user_id', $objUser->id)
-                ->where('scopes.is_active', 1);
-                
-            $arrUserScopes = DB::table('scopes')
-                ->leftJoin('scope_user', 'scopes.id', '=', 'scope_user.scope_id')
-                ->select(DB::raw('scopes.name as scope, scopes.portal_id as portal_id'))
-                ->where('scope_user.user_id', $objUser->id)
-                ->where('scopes.is_active', 1)
-                ->union($objRoleBasedScope)
-                ->get()
-                ->groupBy('portal_id')
-                ->map(function($item, $key){
-                    dd($item->pluck('scope')->toArray());
-                    $objUser->createToken("Meditab", $item->pluck('scope')->toArray())
-                    return $item->pluck('scope');
-                })
-                ->toArray();
-
-
-            dd($arrUserScopes);
+            return $this->startUserSessoin($objUser);
         }
         return abort(404);
-        // $user->token;
+    }
+
+    public function startUserSessoin($objUser){
+        $objRoleBasedScope = DB::table('scopes')
+            ->leftJoin('scope_role', 'scopes.id', '=', 'scope_role.scope_id')
+            ->leftJoin('user_role', 'user_role.role_id', '=', 'scope_role.role_id')
+            ->select(DB::raw('scopes.name as scope, scopes.portal_id as portal_id'))
+            ->where('user_role.user_id', $objUser->id)
+            ->where('scopes.is_active', 1);
+                
+        $arrUserScopes = DB::table('scopes')
+            ->leftJoin('scope_user', 'scopes.id', '=', 'scope_user.scope_id')
+            ->select(DB::raw('scopes.name as scope, scopes.portal_id as portal_id'))
+            ->where('scope_user.user_id', $objUser->id)
+            ->where('scopes.is_active', 1)
+            ->union($objRoleBasedScope)
+            ->get()
+            ->groupBy('portal_id')
+            ->map(function($item, $key)use($objUser){
+                return $objUser->createToken("Meditab", $item->pluck('scope')->toArray())->accessToken;
+            })
+            ->toArray();
+            
+            return view('login')->with('arrUserScopes', $arrUserScopes);
     }
 }
