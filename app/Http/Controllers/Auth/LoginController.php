@@ -56,8 +56,8 @@ class LoginController extends Controller
      */
     public function redirectToProvider($strProvider, Request $request)
     {
+        setcookie('redirect_url', $request->redirect_url, time()+60*60*24*30, 'accounts.meditab.in');
         if(in_array($strProvider, $this->arrPortals)){
-            return Socialite::driver($strProvider)->redirect();
             return Socialite::driver($strProvider)
                 ->with(['redirect_url' => $request->redirect_url])
                 ->redirect();
@@ -67,6 +67,7 @@ class LoginController extends Controller
 
     // Function is being used to login using api call
     public function apiLogin(Request $request){
+        setcookie('redirect_url', $request->redirect_url, time()+60*60*24*30, 'accounts.meditab.in');
         if ($this->guard()->attempt(['email' => $request->email, 'password' => $request->password]))
         {
             return $this->startUserSessoin($this->guard()->user());
@@ -135,6 +136,8 @@ class LoginController extends Controller
             })
             ->toArray();
             
-            return view('login')->with('arrUserScopes', $arrUserScopes);
+            $strRedirectUrl = $_COOKIE['redirect_url'];
+            
+            return view('login')->with('arrUserScopes', $arrUserScopes)->with('strRedirectUrl', $strRedirectUrl);
     }
 }
